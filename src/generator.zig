@@ -53,8 +53,7 @@ pub const Generator = struct {
             }
         }
 
-        count = self.generateProductGrammar(out, count);
-        return count;
+        return self.generateProductGrammar(out, count);
     }
 
     fn generateProductGrammar(self: Generator, out: []Family, start: usize) usize {
@@ -64,41 +63,85 @@ pub const Generator = struct {
             return count;
         }
 
-        // Grammar seed:
+        // Product grammar:
+        //
         //   Π ((a1*k+b1)...(ar*k+br)) / ((c1*k+d1)...(cm*k+dm))
         //
-        // We deliberately generate several structurally distinct shapes rather
-        // than merely changing one scalar parameter.
+        // The important part of this stage is topology. We deliberately create
+        // several different numerator/denominator shapes instead of merely
+        // changing one coefficient inside a fixed 3/3 template.
 
         for (self.config.slope_values) |a| {
             for (self.config.offset_values) |b| {
                 for (self.config.q_exponents) |exponent| {
-                    if (count >= out.len) return count;
+                    const q = pow10(exponent);
 
-                    const numerator = [_]LinearFactor{
+                    if (!self.appendProduct(out, &count, "product-3/3", q, &[_]LinearFactor{
                         .{ .a = a, .b = b },
                         .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
                         .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-                    };
+                    }, &[_]LinearFactor{
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                    })) return count;
 
-                    const denominator = [_]LinearFactor{
+                    if (!self.appendProduct(out, &count, "product-2/2", q, &[_]LinearFactor{
+                        .{ .a = a, .b = b },
+                        .{ .a = Rational.init(2, 1), .b = Rational.init(1, 1) },
+                    }, &[_]LinearFactor{
                         .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-                    };
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
+                    })) return count;
 
-                    out[count] = Family.withFactors(
-                        "product-3/3",
-                        pow10(exponent),
-                        &numerator,
-                        &denominator,
-                    );
-                    count += 1;
+                    if (!self.appendProduct(out, &count, "product-3/2", q, &[_]LinearFactor{
+                        .{ .a = a, .b = b },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(1, 3) },
+                    }, &[_]LinearFactor{
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
+                    })) return count;
+
+                    if (!self.appendProduct(out, &count, "product-2/3", q, &[_]LinearFactor{
+                        .{ .a = a, .b = b },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(1, 2) },
+                    }, &[_]LinearFactor{
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(2, 1) },
+                    })) return count;
+
+                    if (!self.appendProduct(out, &count, "product-3/1", q, &[_]LinearFactor{
+                        .{ .a = a, .b = b },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 3) },
+                    }, &[_]LinearFactor{
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                    })) return count;
                 }
             }
         }
 
         return count;
+    }
+
+    fn appendProduct(
+        self: Generator,
+        out: []Family,
+        count: *usize,
+        name: []const u8,
+        q: f64,
+        numerator: []const LinearFactor,
+        denominator: []const LinearFactor,
+    ) bool {
+        _ = self;
+
+        if (count.* >= out.len) return false;
+
+        out[count.*] = Family.withFactors(name, q, numerator, denominator);
+        count.* += 1;
+        return true;
     }
 };
 
