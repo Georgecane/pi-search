@@ -18,6 +18,7 @@ pub const GeneratorConfig = struct {
     q_exponents: []const i32 = &[_]i32{},
     slope_values: []const Rational = &[_]Rational{},
     offset_values: []const Rational = &[_]Rational{},
+    term_slopes: []const Rational = &[_]Rational{},
 };
 
 pub const Generator = struct {
@@ -39,31 +40,11 @@ pub const Generator = struct {
                 for (self.config.t_values) |t| {
                     if (self.config.q_values.len > 0) {
                         for (self.config.q_values) |q| {
-                            if (count >= out.len) return count;
-
-                            out[count] = .{
-                                .name = kind.name,
-                                .kind = kind.kind,
-                                .s = s,
-                                .t = t,
-                                .q = q.value(),
-                                .description = kind.description,
-                            };
-                            count += 1;
+                            if (!self.appendKindVariants(out, &count, kind, s, t, q.value())) return count;
                         }
                     } else {
                         for (self.config.q_exponents) |exponent| {
-                            if (count >= out.len) return count;
-
-                            out[count] = .{
-                                .name = kind.name,
-                                .kind = kind.kind,
-                                .s = s,
-                                .t = t,
-                                .q = pow10(exponent),
-                                .description = kind.description,
-                            };
-                            count += 1;
+                            if (!self.appendKindVariants(out, &count, kind, s, t, pow10(exponent))) return count;
                         }
                     }
                 }
@@ -71,6 +52,39 @@ pub const Generator = struct {
         }
 
         return self.generateProductGrammar(out, count);
+    }
+
+    fn appendKindVariants(
+        self: Generator,
+        out: []Family,
+        count: *usize,
+        kind: KindInfo,
+        s: Rational,
+        t: Rational,
+        q: f64,
+    ) bool {
+        const slopes = if (self.config.term_slopes.len == 0)
+            &[_]Rational{Rational.init(0, 1)}
+        else
+            self.config.term_slopes;
+
+        for (slopes) |slope| {
+            if (count.* >= out.len) return false;
+
+            out[count.*] = .{
+                .name = kind.name,
+                .kind = kind.kind,
+                .s = s,
+                .t = t,
+                .q = q,
+                .description = kind.description,
+                .prefactor_a = 1.0,
+                .prefactor_b = slope.value(),
+            };
+            count.* += 1;
+        }
+
+        return true;
     }
 
     fn generateProductGrammar(self: Generator, out: []Family, start: usize) usize {
@@ -105,51 +119,56 @@ pub const Generator = struct {
         a: Rational,
         b: Rational,
     ) bool {
-        _ = self;
+        const slopes = if (self.config.term_slopes.len == 0)
+            &[_]Rational{Rational.init(0, 1)}
+        else
+            self.config.term_slopes;
 
-        if (!appendProduct(out, count, "product-3/3", q, &[_]LinearFactor{
-            .{ .a = a, .b = b },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-        }, &[_]LinearFactor{
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-        })) return false;
+        for (slopes) |term_slope| {
+            if (!appendProduct(out, count, "product-3/3", q, term_slope.value(), &[_]LinearFactor{
+                .{ .a = a, .b = b },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+            }, &[_]LinearFactor{
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+            })) return false;
 
-        if (!appendProduct(out, count, "product-2/2", q, &[_]LinearFactor{
-            .{ .a = a, .b = b },
-            .{ .a = Rational.init(2, 1), .b = Rational.init(1, 1) },
-        }, &[_]LinearFactor{
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
-        })) return false;
+            if (!appendProduct(out, count, "product-2/2", q, term_slope.value(), &[_]LinearFactor{
+                .{ .a = a, .b = b },
+                .{ .a = Rational.init(2, 1), .b = Rational.init(1, 1) },
+            }, &[_]LinearFactor{
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
+            })) return false;
 
-        if (!appendProduct(out, count, "product-3/2", q, &[_]LinearFactor{
-            .{ .a = a, .b = b },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(1, 3) },
-        }, &[_]LinearFactor{
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
-        })) return false;
+            if (!appendProduct(out, count, "product-3/2", q, term_slope.value(), &[_]LinearFactor{
+                .{ .a = a, .b = b },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(1, 3) },
+            }, &[_]LinearFactor{
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
+            })) return false;
 
-        if (!appendProduct(out, count, "product-2/3", q, &[_]LinearFactor{
-            .{ .a = a, .b = b },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(1, 2) },
-        }, &[_]LinearFactor{
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(2, 1) },
-        })) return false;
+            if (!appendProduct(out, count, "product-2/3", q, term_slope.value(), &[_]LinearFactor{
+                .{ .a = a, .b = b },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(1, 2) },
+            }, &[_]LinearFactor{
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(1, 1) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(2, 1) },
+            })) return false;
 
-        if (!appendProduct(out, count, "product-3/1", q, &[_]LinearFactor{
-            .{ .a = a, .b = b },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
-            .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 3) },
-        }, &[_]LinearFactor{
-            .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
-        })) return false;
+            if (!appendProduct(out, count, "product-3/1", q, term_slope.value(), &[_]LinearFactor{
+                .{ .a = a, .b = b },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
+                .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 3) },
+            }, &[_]LinearFactor{
+                .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+            })) return false;
+        }
 
         return true;
     }
@@ -160,12 +179,15 @@ fn appendProduct(
     count: *usize,
     name: []const u8,
     q: f64,
+    term_slope: f64,
     numerator: []const LinearFactor,
     denominator: []const LinearFactor,
 ) bool {
     if (count.* >= out.len) return false;
 
     out[count.*] = Family.withFactors(name, q, numerator, denominator);
+    out[count.*].prefactor_a = 1.0;
+    out[count.*].prefactor_b = term_slope;
     count.* += 1;
     return true;
 }
