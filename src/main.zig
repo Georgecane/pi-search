@@ -3,7 +3,6 @@ const Rational = @import("rational.zig").Rational;
 const Family = @import("family.zig").Family;
 const FamilyKind = @import("family.zig").FamilyKind;
 const Generator = @import("generator.zig").Generator;
-const GeneratorConfig = @import("generator.zig").GeneratorConfig;
 const benchmark = @import("benchmark.zig");
 
 pub fn main() void {
@@ -33,13 +32,34 @@ pub fn main() void {
         -12, -16, -20, -30, -50,
     };
 
-    var families: [4096]Family = undefined;
+    const slope_values = [_]Rational{
+        Rational.init(1, 1),
+        Rational.init(2, 1),
+        Rational.init(3, 1),
+        Rational.init(1, 2),
+        Rational.init(1, 3),
+        Rational.init(1, 4),
+    };
+
+    const offset_values = [_]Rational{
+        Rational.init(-2, 1),
+        Rational.init(-1, 1),
+        Rational.init(-1, 2),
+        Rational.init(0, 1),
+        Rational.init(1, 2),
+        Rational.init(1, 1),
+        Rational.init(2, 1),
+    };
+
+    var families: [8192]Family = undefined;
 
     const generator = Generator{
         .config = .{
             .q_exponents = &q_exponents,
             .s_values = &s_values,
             .t_values = &t_values,
+            .slope_values = &slope_values,
+            .offset_values = &offset_values,
         },
     };
 
@@ -47,19 +67,19 @@ pub fn main() void {
 
     std.debug.print(
         "pi-search\n==========\n" ++
-        "Multi-family mathematical search space\n" ++
+        "Formula-grammar mathematical search space\n" ++
         "Candidates generated: {d}\n\n",
         .{count},
     );
 
-    const shown = @min(count, 100);
+    const shown = @min(count, 120);
     for (families[0..shown]) |candidate| {
         benchmark.printFamily(candidate, 100.0);
     }
 
     std.debug.print(
         "\nShowing first {d} candidates.\n" ++
-        "All generated candidates are exploratory, not proven pi identities.\n",
+        "Generated-product candidates are exploratory and unverified.\n",
         .{shown},
     );
 }
@@ -69,7 +89,7 @@ test "generator produces multiple families" {
     const t_values = [_]Rational{Rational.init(1, 5)};
     const q_exponents = [_]i32{-10, -20};
 
-    var families: [32]Family = undefined;
+    var families: [64]Family = undefined;
 
     const generator = Generator{
         .config = .{
@@ -84,4 +104,31 @@ test "generator produces multiple families" {
     try std.testing.expectEqual(@as(usize, 10), count);
     try std.testing.expectEqual(FamilyKind.hypergeometric_3f2, families[0].kind);
     try std.testing.expectEqual(FamilyKind.balanced_product, families[8].kind);
+}
+
+test "product grammar creates explicit factor structure" {
+    const s_values = [_]Rational{Rational.init(1, 6)};
+    const t_values = [_]Rational{Rational.init(1, 5)};
+    const q_exponents = [_]i32{-10};
+    const slopes = [_]Rational{Rational.init(2, 1)};
+    const offsets = [_]Rational{Rational.init(1, 2)};
+
+    var families: [64]Family = undefined;
+
+    const generator = Generator{
+        .config = .{
+            .q_exponents = &q_exponents,
+            .s_values = &s_values,
+            .t_values = &t_values,
+            .slope_values = &slopes,
+            .offset_values = &offsets,
+        },
+    };
+
+    const count = generator.generate(&families);
+
+    try std.testing.expectEqual(@as(usize, 11), count);
+    try std.testing.expectEqual(FamilyKind.generated_product, families[10].kind);
+    try std.testing.expectEqual(@as(usize, 3), families[10].numerator_count);
+    try std.testing.expectEqual(@as(usize, 3), families[10].denominator_count);
 }
