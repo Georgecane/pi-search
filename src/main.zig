@@ -19,18 +19,12 @@ pub fn main() void {
     };
 
     const q_values = [_]Rational{
-        Rational.init(1, 8),
-        Rational.init(-1, 8),
-        Rational.init(1, 16),
-        Rational.init(-1, 16),
-        Rational.init(1, 64),
-        Rational.init(-1, 64),
-        Rational.init(1, 125),
-        Rational.init(-1, 125),
-        Rational.init(1, 1000),
-        Rational.init(-1, 1000),
-        Rational.init(1, 4096),
-        Rational.init(-1, 4096),
+        Rational.init(1, 8), Rational.init(-1, 8),
+        Rational.init(1, 16), Rational.init(-1, 16),
+        Rational.init(1, 64), Rational.init(-1, 64),
+        Rational.init(1, 125), Rational.init(-1, 125),
+        Rational.init(1, 1000), Rational.init(-1, 1000),
+        Rational.init(1, 4096), Rational.init(-1, 4096),
     };
 
     const slope_values = [_]Rational{
@@ -65,14 +59,16 @@ pub fn main() void {
         .{count},
     );
 
-    const shown = @min(count, 120);
+    // The first 120 entries are grammar order, not mathematical ranking.
+    // Keep this view compact while exposing actual numerical behavior.
+    const shown = @min(count, 40);
     for (families[0..shown]) |candidate| {
         benchmark.printFamily(candidate, 100.0);
     }
 
     std.debug.print(
-        "\nShowing first {d} candidates.\n" ++
-        "Rational q grammar is active; generated-product candidates remain exploratory.\n",
+        "\nShowing first {d} grammar candidates.\n" ++
+        "Numerical residuals are heuristic f64 measurements, not identity proofs.\n",
         .{shown},
     );
 }
