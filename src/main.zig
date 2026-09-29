@@ -3,7 +3,7 @@ const Rational = @import("rational.zig").Rational;
 const Family = @import("family.zig").Family;
 const FamilyKind = @import("family.zig").FamilyKind;
 const Generator = @import("generator.zig").Generator;
-const benchmark = @import("benchmark.zig");
+const search = @import("search.zig");
 
 pub fn main() void {
     const s_values = [_]Rational{
@@ -59,17 +59,41 @@ pub fn main() void {
         .{count},
     );
 
-    // The first 120 entries are grammar order, not mathematical ranking.
-    // Keep this view compact while exposing actual numerical behavior.
-    const shown = @min(count, 40);
-    for (families[0..shown]) |candidate| {
-        benchmark.printFamily(candidate, 100.0);
+    const ranking = search.rank(families[0..count], 10000, 1e-15);
+
+    std.debug.print(
+        "Top {d} numerical matches\n" ++
+        "--------------------------\n",
+        .{ranking.count},
+    );
+
+    for (ranking.items[0..ranking.count], 0..) |item, index| {
+        const family = item.family;
+        const result = item.evaluation;
+
+        std.debug.print(
+            "#{d:0>2} {s: <18} s={d}/{d} t={d}/{d} q={e:.4} " ++
+            "K={s: <10} K*S={e:.12} target={s: <4} residual={e:.3}\n",
+            .{
+                index + 1,
+                family.name,
+                family.s.num,
+                family.s.den,
+                family.t.num,
+                family.t.den,
+                family.q,
+                result.best.prefactor.name,
+                result.best.scaled_sum,
+                result.best.target_name,
+                result.best.residual,
+            },
+        );
     }
 
     std.debug.print(
-        "\nShowing first {d} grammar candidates.\n" ++
-        "Numerical residuals are heuristic f64 measurements, not identity proofs.\n",
-        .{shown},
+        "\nRanking is heuristic f64 numerical evidence only. " ++
+        "No candidate is considered a proven pi identity.\n",
+        .{},
     );
 }
 
