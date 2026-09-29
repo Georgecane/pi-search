@@ -106,7 +106,7 @@ test "generator produces multiple families" {
     try std.testing.expectEqual(FamilyKind.balanced_product, families[8].kind);
 }
 
-test "product grammar creates explicit factor structure" {
+test "product grammar creates multiple topologies" {
     const s_values = [_]Rational{Rational.init(1, 6)};
     const t_values = [_]Rational{Rational.init(1, 5)};
     const q_exponents = [_]i32{-10};
@@ -127,8 +127,20 @@ test "product grammar creates explicit factor structure" {
 
     const count = generator.generate(&families);
 
-    try std.testing.expectEqual(@as(usize, 6), count);
+    try std.testing.expectEqual(@as(usize, 10), count);
     try std.testing.expectEqual(FamilyKind.generated_product, families[5].kind);
     try std.testing.expectEqual(@as(usize, 3), families[5].numerator_count);
     try std.testing.expectEqual(@as(usize, 3), families[5].denominator_count);
+
+    try std.testing.expectEqual(@as(usize, 2), families[6].numerator_count);
+    try std.testing.expectEqual(@as(usize, 2), families[6].denominator_count);
+
+    try std.testing.expectEqual(@as(usize, 3), families[7].numerator_count);
+    try std.testing.expectEqual(@as(usize, 2), families[7].denominator_count);
+
+    try std.testing.expectEqual(@as(usize, 2), families[8].numerator_count);
+    try std.testing.expectEqual(@as(usize, 3), families[8].denominator_count);
+
+    try std.testing.expectEqual(@as(usize, 3), families[9].numerator_count);
+    try std.testing.expectEqual(@as(usize, 1), families[9].denominator_count);
 }
