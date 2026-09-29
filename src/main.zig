@@ -107,6 +107,55 @@ pub fn main() void {
     );
 }
 
+    std.debug.print("\nTop-candidate formula details\n-----------------------------\n", .{});
+
+    for (ranking.items[0..ranking.count], 0..) |item, index| {
+        printCandidateFormula(index + 1, item.family);
+    }
+
+fn printCandidateFormula(index: usize, family: Family) void {
+    std.debug.print("#{d:0>2} {s}: ", .{ index, family.name });
+
+    if (family.kind == .generated_product) {
+        std.debug.print("T_n = q^n (1 + ({d:.6}) n) * product(F(k), k=1..n)\n", .{family.prefactor_b});
+        std.debug.print("    F(k) = ", .{});
+        printFactors(family.numerator[0..family.numerator_count]);
+        std.debug.print(" / ", .{});
+        printFactors(family.denominator[0..family.denominator_count]);
+        std.debug.print("\n", .{});
+    } else {
+        std.debug.print("{s}, term polynomial = 1 + ({d:.6}) n\n", .{
+            family.description,
+            family.prefactor_b,
+        });
+    }
+
+    std.debug.print("    q = {e:.12}, s = {d}/{d}, t = {d}/{d}\n\n", .{
+        family.q,
+        family.s.num,
+        family.s.den,
+        family.t.num,
+        family.t.den,
+    });
+}
+
+fn printFactors(factors: []const @import("family.zig").LinearFactor) void {
+    if (factors.len == 0) {
+        std.debug.print("1", .{});
+        return;
+    }
+
+    for (factors, 0..) |factor, index| {
+        if (index > 0) std.debug.print(" * ", .{});
+        std.debug.print("(({d}/{d})k + ({d}/{d}))", .{
+            factor.a.num,
+            factor.a.den,
+            factor.b.num,
+            factor.b.den,
+        });
+    }
+}
+
 test "generator produces multiple families" {
     const s_values = [_]Rational{Rational.init(1, 6)};
     const t_values = [_]Rational{Rational.init(1, 5)};
