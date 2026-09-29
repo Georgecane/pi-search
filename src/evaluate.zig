@@ -52,8 +52,8 @@ const prefactors = [_]Prefactor{
 };
 
 pub fn evaluate(family: Family, max_terms: usize, tolerance: f64) Result {
-    var term: f64 = 1.0;
-    var sum: f64 = 1.0;
+    var base_term: f64 = 1.0;
+    var sum: f64 = family.prefactor_a;
     var n: usize = 0;
 
     while (n < max_terms) : (n += 1) {
@@ -61,15 +61,16 @@ pub fn evaluate(family: Family, max_terms: usize, tolerance: f64) Result {
         const ratio = family.termRatio(next_n);
 
         if (!std.math.isFinite(ratio)) {
-            return makeResult(sum, next_n, false, term);
+            return makeResult(sum, next_n, false, base_term);
         }
 
-        term *= ratio;
+        base_term *= ratio;
 
-        if (!std.math.isFinite(term)) {
-            return makeResult(sum, next_n, false, term);
+        if (!std.math.isFinite(base_term)) {
+            return makeResult(sum, next_n, false, base_term);
         }
 
+        const term = family.termValue(next_n, base_term);
         sum += term;
 
         if (@abs(term) <= tolerance * @max(@abs(sum), 1.0)) {
@@ -77,7 +78,7 @@ pub fn evaluate(family: Family, max_terms: usize, tolerance: f64) Result {
         }
     }
 
-    return makeResult(sum, max_terms, false, term);
+    return makeResult(sum, max_terms, false, family.termValue(max_terms, base_term));
 }
 
 fn makeResult(sum: f64, terms: usize, converged: bool, last_term: f64) Result {
