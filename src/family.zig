@@ -29,8 +29,7 @@ pub const Family = struct {
     description: []const u8,
 
     // Term polynomial P(n) = prefactor_a + prefactor_b*n.
-    // The overall scale is handled separately by the K search, so
-    // the generator normally fixes prefactor_a = 1.
+    // Its overall scale is absorbed by the external K search.
     prefactor_a: f64 = 1.0,
     prefactor_b: f64 = 0.0,
 
@@ -90,15 +89,10 @@ pub const Family = struct {
         return base_term * (self.prefactor_a + self.prefactor_b * x);
     }
 
+    // Ratio of the underlying hypergeometric/product term only.
+    // The polynomial P(n) is applied exactly once by termValue().
     pub fn termRatio(self: Family, n: usize) f64 {
-        const previous = @as(f64, @floatFromInt(n - 1));
-        const current = @as(f64, @floatFromInt(n));
-
-        const polynomial_ratio =
-            (self.prefactor_a + self.prefactor_b * current) /
-            (self.prefactor_a + self.prefactor_b * previous);
-
-        return self.q * self.ratio(n) * polynomial_ratio;
+        return self.q * self.ratio(n);
     }
 
     pub fn withFactors(
