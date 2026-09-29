@@ -3,6 +3,7 @@ const family = @import("family.zig");
 
 const Family = family.Family;
 const FamilyKind = family.FamilyKind;
+const LinearFactor = family.LinearFactor;
 
 const KindInfo = struct {
     kind: FamilyKind,
@@ -14,6 +15,8 @@ pub const GeneratorConfig = struct {
     s_values: []const Rational,
     t_values: []const Rational,
     q_exponents: []const i32,
+    slope_values: []const Rational = &[_]Rational{},
+    offset_values: []const Rational = &[_]Rational{},
 };
 
 pub const Generator = struct {
@@ -21,31 +24,11 @@ pub const Generator = struct {
 
     pub fn generate(self: Generator, out: []Family) usize {
         const kinds = [_]KindInfo{
-            .{
-                .kind = .hypergeometric_3f2,
-                .name = "3F2",
-                .description = "Hypergeometric 3F2-type recurrence.",
-            },
-            .{
-                .kind = .inverse_binomial,
-                .name = "inverse-binomial",
-                .description = "Inverse-binomial-type recurrence.",
-            },
-            .{
-                .kind = .central_binomial,
-                .name = "central-binomial",
-                .description = "Central-binomial-type recurrence.",
-            },
-            .{
-                .kind = .factorial_ratio,
-                .name = "factorial-ratio",
-                .description = "Factorial-ratio-type recurrence.",
-            },
-            .{
-                .kind = .balanced_product,
-                .name = "balanced-product",
-                .description = "Balanced product recurrence.",
-            },
+            .{ .kind = .hypergeometric_3f2, .name = "3F2", .description = "Hypergeometric 3F2-type recurrence." },
+            .{ .kind = .inverse_binomial, .name = "inverse-binomial", .description = "Inverse-binomial-type recurrence." },
+            .{ .kind = .central_binomial, .name = "central-binomial", .description = "Central-binomial-type recurrence." },
+            .{ .kind = .factorial_ratio, .name = "factorial-ratio", .description = "Factorial-ratio-type recurrence." },
+            .{ .kind = .balanced_product, .name = "balanced-product", .description = "Balanced product recurrence." },
         };
 
         var count: usize = 0;
@@ -66,6 +49,51 @@ pub const Generator = struct {
                         };
                         count += 1;
                     }
+                }
+            }
+        }
+
+        count = self.generateProductGrammar(out, count);
+        return count;
+    }
+
+    fn generateProductGrammar(self: Generator, out: []Family, start: usize) usize {
+        var count = start;
+
+        if (self.config.slope_values.len == 0 or self.config.offset_values.len == 0) {
+            return count;
+        }
+
+        // Grammar seed:
+        //   Π ((a1*k+b1)...(ar*k+br)) / ((c1*k+d1)...(cm*k+dm))
+        //
+        // We deliberately generate several structurally distinct shapes rather
+        // than merely changing one scalar parameter.
+
+        for (self.config.slope_values) |a| {
+            for (self.config.offset_values) |b| {
+                for (self.config.q_exponents) |exponent| {
+                    if (count >= out.len) return count;
+
+                    const numerator = [_]LinearFactor{
+                        .{ .a = a, .b = b },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(-1, 2) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                    };
+
+                    const denominator = [_]LinearFactor{
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                        .{ .a = Rational.init(1, 1), .b = Rational.init(0, 1) },
+                    };
+
+                    out[count] = Family.withFactors(
+                        "product-3/3",
+                        pow10(exponent),
+                        &numerator,
+                        &denominator,
+                    );
+                    count += 1;
                 }
             }
         }
