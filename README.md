@@ -1,6 +1,6 @@
 # pi-search
 
-A Zig-based mathematical search engine for discovering and benchmarking fast-convergent hypergeometric and product-form series related to \(\pi\).
+A Zig-based mathematical search engine for discovering and benchmarking fast-convergent hypergeometric and product-form series related to $$\pi$$.
 
 ## Current goal
 
@@ -26,7 +26,7 @@ The objective is to search for mathematically structured series whose effective 
 
 ## Important distinction
 
-A rapidly convergent numerical series is **not automatically a formula for \(\pi\)**.
+A rapidly convergent numerical series is **not automatically a formula for $$\pi$$**.
 
 Generated families are therefore marked as `exploratory` until an identity certificate exists.
 
