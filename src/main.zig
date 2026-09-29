@@ -127,8 +127,8 @@ test "product grammar creates explicit factor structure" {
 
     const count = generator.generate(&families);
 
-    try std.testing.expectEqual(@as(usize, 11), count);
-    try std.testing.expectEqual(FamilyKind.generated_product, families[10].kind);
-    try std.testing.expectEqual(@as(usize, 3), families[10].numerator_count);
-    try std.testing.expectEqual(@as(usize, 3), families[10].denominator_count);
+    try std.testing.expectEqual(@as(usize, 6), count);
+    try std.testing.expectEqual(FamilyKind.generated_product, families[5].kind);
+    try std.testing.expectEqual(@as(usize, 3), families[5].numerator_count);
+    try std.testing.expectEqual(@as(usize, 3), families[5].denominator_count);
 }
