@@ -38,7 +38,15 @@ pub fn main() void {
         Rational.init(2, 1),
     };
 
-    var families: [8192]Family = undefined;
+    // We normalize the linear term to 1 + c*n.
+    // The missing overall scale is absorbed by the K search.
+    const term_slopes = [_]Rational{
+        Rational.init(-2, 1), Rational.init(-1, 1), Rational.init(-1, 2),
+        Rational.init(0, 1), Rational.init(1, 2), Rational.init(1, 1),
+        Rational.init(2, 1), Rational.init(3, 1), Rational.init(4, 1),
+    };
+
+    var families: [65536]Family = undefined;
 
     const generator = Generator{
         .config = .{
@@ -47,6 +55,7 @@ pub fn main() void {
             .t_values = &t_values,
             .slope_values = &slope_values,
             .offset_values = &offset_values,
+            .term_slopes = &term_slopes,
         },
     };
 
@@ -72,11 +81,12 @@ pub fn main() void {
         const result = item.evaluation;
 
         std.debug.print(
-            "#{d:0>2} {s: <18} s={d}/{d} t={d}/{d} q={e:.4} " ++
+            "#{d:0>2} {s: <18} c={d:.3} s={d}/{d} t={d}/{d} q={e:.4} " ++
             "K={s: <10} K*S={e:.12} target={s: <4} residual={e:.3}\n",
             .{
                 index + 1,
                 family.name,
+                family.prefactor_b,
                 family.s.num,
                 family.s.den,
                 family.t.num,
