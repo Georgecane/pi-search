@@ -28,6 +28,12 @@ pub const Family = struct {
     q: f64,
     description: []const u8,
 
+    // Term polynomial P(n) = prefactor_a + prefactor_b*n.
+    // The overall scale is handled separately by the K search, so
+    // the generator normally fixes prefactor_a = 1.
+    prefactor_a: f64 = 1.0,
+    prefactor_b: f64 = 0.0,
+
     numerator: [max_factors]LinearFactor = undefined,
     denominator: [max_factors]LinearFactor = undefined,
     numerator_count: usize = 0,
@@ -79,8 +85,20 @@ pub const Family = struct {
         };
     }
 
+    pub fn termValue(self: Family, n: usize, base_term: f64) f64 {
+        const x = @as(f64, @floatFromInt(n));
+        return base_term * (self.prefactor_a + self.prefactor_b * x);
+    }
+
     pub fn termRatio(self: Family, n: usize) f64 {
-        return self.q * self.ratio(n);
+        const previous = @as(f64, @floatFromInt(n - 1));
+        const current = @as(f64, @floatFromInt(n));
+
+        const polynomial_ratio =
+            (self.prefactor_a + self.prefactor_b * current) /
+            (self.prefactor_a + self.prefactor_b * previous);
+
+        return self.q * self.ratio(n) * polynomial_ratio;
     }
 
     pub fn withFactors(
